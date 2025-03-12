@@ -49,7 +49,7 @@ mindmap-app/
 1. **リポジトリのクローン**
 
 ```bash
-git clone https://github.com/your-username/mindmap-app.git
+git clone https://github.com/JiNenn/mindmap-app.git
 cd mindmap-app
 ```
 
