@@ -2,7 +2,12 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+const dotenv = require("dotenv");
+const path = require("path");
+
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
  * ユーザー登録
