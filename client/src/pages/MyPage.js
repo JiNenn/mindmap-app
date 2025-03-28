@@ -1,4 +1,4 @@
-// client/src/pages/MyPage.js
+// MyPage.js
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,6 @@ function MyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // JWT トークンを localStorage から取得
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -29,7 +28,6 @@ function MyPage() {
       const res = await axios.get(`${SERVER_URL}/api/mindmaps/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // お気に入り情報がある場合はそのまま、なければ false
       const dataWithFav = res.data.map((m) => ({ ...m, favorite: m.favorite === true }));
       setMindmaps(dataWithFav);
       setLoading(false);
@@ -40,7 +38,6 @@ function MyPage() {
     }
   };
 
-  // 新規マインドマップ作成 → 作成後 Editor へ遷移
   const handleCreateNew = async () => {
     try {
       const newId = `mindmap_${Date.now()}`;
@@ -66,20 +63,16 @@ function MyPage() {
     }
   };
 
-  // Editor への遷移
   const handleGoEditor = (mapId) => {
     navigate(`/editor/${mapId}`);
   };
 
-  // handleDelete：元のコードをほぼそのまま採用
   const handleDelete = async (mapId) => {
     if (!window.confirm('本当に削除しますか？')) return;
-    console.log('handleDelete: mapId=', mapId, ' token=', token);
     try {
-      const res = await axios.delete(`${SERVER_URL}/api/mindmaps/${mapId}`, {
+      await axios.delete(`${SERVER_URL}/api/mindmaps/${mapId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Delete response:', res.data);
       setMindmaps((prev) => prev.filter((m) => m.id !== mapId));
     } catch (err) {
       console.error('削除エラー:', err);
@@ -95,7 +88,6 @@ function MyPage() {
     }
   };
 
-  // お気に入りトグル：スターアイコンをクリックして切替
   const toggleFavorite = async (mapId, currentFavorite) => {
     try {
       const res = await axios.put(
@@ -104,7 +96,9 @@ function MyPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMindmaps((prev) =>
-        prev.map((m) => (m.id === mapId ? { ...m, favorite: res.data.favorite } : m))
+        prev.map((m) =>
+          m.id === mapId ? { ...m, favorite: res.data.favorite } : m
+        )
       );
     } catch (err) {
       console.error(err);
@@ -116,6 +110,32 @@ function MyPage() {
     localStorage.removeItem('token');
     navigate('/login');
   };
+
+  // タイトルが全角換算で12文字を超える場合、適切な位置で切り捨てて「…」を追加する関数
+  const getDisplayTitle = (title) => {
+    if (!title) return '';
+    
+    let widthCount = 0;
+    let cutIndex = title.length;
+    
+    for (let i = 0; i < title.length; i++) {
+      // 半角は0.5、全角は1とカウント
+      widthCount += title[i].match(/[^\x00-\xff]/) ? 1 : 0.5;
+      
+      // 全角12文字を超えたらそこで切る
+      if (widthCount > 12) {
+        cutIndex = i;
+        break;
+      }
+    }
+  
+    // 切り捨てる必要がある場合は、指定位置までの文字列＋「…」を返す
+    if (cutIndex < title.length) {
+      return title.substring(0, cutIndex) + '…';
+    }
+    return title;
+  };
+  
 
   if (loading) {
     return <div style={styles.loading}>読み込み中...</div>;
@@ -162,22 +182,26 @@ function MyPage() {
                   onClick={() => toggleFavorite(map.id, map.favorite)}
                   style={{
                     ...styles.starIcon,
-                    color: map.favorite ? 'gold' : '#ccc'
+                    color: map.favorite ? '#f5c518' : '#ccc'
                   }}
                   title="お気に入りに登録 / 解除"
                 >
                   {map.favorite ? '★' : '☆'}
                 </div>
 
-                {/* マップタイトル */}
-                <h3 style={styles.mapTitle} onClick={() => handleGoEditor(map.id)}>
-                  {map.title}
+                {/* タイトル（長い場合は切り詰め） */}
+                <h3
+                  style={styles.mapTitle}
+                  onClick={() => handleGoEditor(map.id)}
+                >
+                  {getDisplayTitle(map.title)}
                 </h3>
+
                 <small style={styles.mapTime}>
                   {new Date(map.createdAt).toLocaleString()}
                 </small>
 
-                {/* 削除ボタン（カード右下、お気に入りスターの下） */}
+                {/* 削除ボタン（カード右下） */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -195,7 +219,7 @@ function MyPage() {
 
       {/* フッター */}
       <footer style={styles.footer}>
-        <small style={{ color: '#888' }}>
+        <small style={{ color: '#666' }}>
           &copy; 2025 MindMap App. All rights reserved.
         </small>
       </footer>
@@ -208,13 +232,13 @@ export default MyPage;
 const styles = {
   pageContainer: {
     minHeight: '100vh',
-    background: '#6A5D4D', // 背景色を落ち着いた暗いトーンに
+    background: '#f7f7f7',
     padding: '20px',
-    fontFamily: 'Georgia, serif'
+    fontFamily: 'Arial, sans-serif'
   },
   header: {
-    background: '#3e372f',
-    borderBottom: '2px solid #2b2723',
+    background: '#fff',
+    borderBottom: '1px solid #ccc',
     padding: '10px 20px',
     display: 'flex',
     justifyContent: 'space-between',
@@ -223,7 +247,7 @@ const styles = {
   },
   headerTitle: {
     margin: 0,
-    color: '#e3d9cc',
+    color: '#333',
     fontSize: '24px'
   },
   headerButtons: {
@@ -231,7 +255,7 @@ const styles = {
     gap: '10px'
   },
   createButton: {
-    background: '#7b4b28',
+    background: '#007BFF',
     color: '#fff',
     border: 'none',
     padding: '8px 16px',
@@ -239,20 +263,20 @@ const styles = {
     cursor: 'pointer'
   },
   logoutButton: {
-    background: '#bb4a43',
+    background: '#6c757d',
     color: '#fff',
     border: 'none',
-    padding: '8px 12px',
+    padding: '8px 16px',
     borderRadius: '4px',
     cursor: 'pointer'
   },
   mainArea: {
     flexGrow: 1,
     padding: '20px',
-    color: '#e3d9cc'
+    color: '#333'
   },
   noMapsText: {
-    color: '#e3d9cc'
+    color: '#333'
   },
   gridWrapper: {
     display: 'grid',
@@ -261,12 +285,12 @@ const styles = {
   },
   mapCard: {
     position: 'relative',
-    border: '1px solid #2b2723',
+    border: '1px solid #ccc',
     borderRadius: '4px',
     padding: '10px',
-    background: '#4a423a',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-    color: '#f0ece9'
+    background: '#fff',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    color: '#333'
   },
   starIcon: {
     position: 'absolute',
@@ -275,21 +299,23 @@ const styles = {
     fontSize: '20px',
     cursor: 'pointer'
   },
+  // タイトルが改行されるようにする
   mapTitle: {
     margin: '0 0 8px',
     cursor: 'pointer',
     fontSize: '18px',
-    color: '#f0ece9'
+    color: '#333',
+    whiteSpace: 'pre-wrap',   // 改行を反映
+    wordWrap: 'break-word'    // 単語途中でも改行を許可
   },
   mapTime: {
-    color: '#d2c8bc'
+    color: '#666'
   },
-  // 削除ボタンをカードの右下に配置
   deleteButton: {
     position: 'absolute',
     bottom: 8,
     right: 8,
-    background: '#bb4a43',
+    background: 'rgb(187, 74, 67)',
     color: '#fff',
     border: 'none',
     padding: '6px 12px',
@@ -298,23 +324,23 @@ const styles = {
     transition: 'background 0.3s'
   },
   footer: {
-    background: '#3e372f',
-    borderTop: '2px solid #2b2723',
+    background: '#fff',
+    borderTop: '1px solid #ccc',
     textAlign: 'center',
     padding: '10px'
   },
   loading: {
-    color: '#e3d9cc',
-    background: '#1d1915',
+    color: '#333',
+    background: '#f7f7f7',
     minHeight: '100vh',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    fontFamily: 'Georgia, serif'
+    fontFamily: 'Arial, sans-serif'
   },
   reloadButton: {
     marginTop: '1rem',
-    background: '#7b4b28',
+    background: '#007BFF',
     color: '#fff',
     border: 'none',
     padding: '8px 16px',

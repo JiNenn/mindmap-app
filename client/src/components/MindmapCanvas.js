@@ -14,26 +14,13 @@ function MindmapCanvas({ mindmap, setMindmap }) {
   });
   const [isEdgeMode, setIsEdgeMode] = useState(false);
   const [edgeStart, setEdgeStart] = useState(null);
+
+  // ノード編集用
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editingText, setEditingText] = useState('');
+
+  // ホバー状態のノードID（削除ボタン表示などに利用）
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
-
-  /**
-   * ノードのサイズ更新（ユーザーがリサイズ操作後に呼び出し）
-   * ※編集中のノードの場合はサイズ更新しない
-   */
-  const handleNodeResize = (index, el, scaleFactor = 1.0) => {
-    if (editingNodeId === mindmap.nodes[index].nodeId) return;
-    const newWidth = el.offsetWidth / scaleFactor;
-    const newHeight = el.offsetHeight / scaleFactor;
-    const currentNode = mindmap.nodes[index];
-
-    if (currentNode.width !== newWidth || currentNode.height !== newHeight) {
-      const newNodes = [...mindmap.nodes];
-      newNodes[index] = { ...newNodes[index], width: newWidth, height: newHeight };
-      setMindmap({ ...mindmap, nodes: newNodes });
-    }
-  };
 
   /**
    * ノードのドラッグ開始（エッジ追加モード／編集中は無効）
@@ -156,6 +143,20 @@ function MindmapCanvas({ mindmap, setMindmap }) {
     setMindmap({ ...mindmap, nodes: newNodes });
   };
 
+  /**
+   * ノードサイズ拡大用：右下のリサイズハンドルをクリック
+   */
+  const increaseNodeSize = (index) => {
+    const newNodes = [...mindmap.nodes];
+    const current = newNodes[index];
+    newNodes[index] = {
+      ...current,
+      width: (current.width || DEFAULT_NODE_WIDTH) + 20,
+      height: (current.height || DEFAULT_NODE_HEIGHT) + 20
+    };
+    setMindmap({ ...mindmap, nodes: newNodes });
+  };
+
   // UI: エッジモード情報
   const edgeModeInfo = isEdgeMode
     ? edgeStart
@@ -164,7 +165,7 @@ function MindmapCanvas({ mindmap, setMindmap }) {
     : null;
 
   return (
-    <div style={canvasStyles.container}>
+    <div style={{ width: '100%' }}>
       {/* コントロールバー */}
       <div style={canvasStyles.controlBar}>
         <button style={canvasStyles.controlButton} onClick={addNode}>
@@ -180,7 +181,7 @@ function MindmapCanvas({ mindmap, setMindmap }) {
             setEdgeStart(null);
           }}
         >
-          {isEdgeMode ? 'エッジ追加モード解除' : 'エッジ追加モード'}
+          {isEdgeMode ? 'エッジ追加解除' : 'エッジ追加モード'}
         </button>
         {edgeModeInfo && <span style={canvasStyles.edgeInfo}>{edgeModeInfo}</span>}
       </div>
@@ -191,7 +192,7 @@ function MindmapCanvas({ mindmap, setMindmap }) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       >
-        {/* エッジ用 SVG */}
+        {/* エッジ用の SVG レイヤー */}
         <svg style={canvasStyles.svgLayer}>
           {(mindmap.edges || []).map((edge) => {
             const fromNode = getNodeById(edge.from);
@@ -218,7 +219,7 @@ function MindmapCanvas({ mindmap, setMindmap }) {
           const isDraggingNode = dragging.isDragging && dragging.nodeIndex === idx;
           const scale = editingNodeId === node.nodeId ? 1.0 : isDraggingNode ? 1.1 : 1.0;
 
-          // ノードごとのスタイル（デフォルト・エッジ接続ありなど）
+          // ノードごとのスタイル
           let nodeBackground = '#ffffff';
           let textColor = 'black';
           let nodeRadius = '4px';
@@ -255,7 +256,8 @@ function MindmapCanvas({ mindmap, setMindmap }) {
                 userSelect: 'none',
                 transform: `scale(${scale})`,
                 transformOrigin: 'center',
-                resize: 'both',
+                // 編集中のノードのみ resize ハンドル（ブラウザのリサイズカーソル）を表示
+                resize: editingNodeId === node.nodeId ? 'both' : 'none',
                 overflow: 'hidden',
                 boxSizing: 'border-box'
               }}
@@ -266,7 +268,7 @@ function MindmapCanvas({ mindmap, setMindmap }) {
               onMouseLeave={() => setHoveredNodeId(null)}
               onMouseUp={(e) => {
                 if (editingNodeId !== node.nodeId) {
-                  handleNodeResize(idx, e.currentTarget, scale);
+                  // ※自動リサイズ呼び出しは削除（手動リサイズはリサイズカーソル or リサイズハンドルで行う）
                 }
               }}
             >
@@ -323,6 +325,31 @@ function MindmapCanvas({ mindmap, setMindmap }) {
                   }}
                 />
               )}
+              {/* 右下のリサイズハンドル */}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  increaseNodeSize(idx);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: 2,
+                  bottom: 2,
+                  width: '16px',
+                  height: '16px',
+                  background: '#ccc',
+                  borderRadius: '2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#333'
+                }}
+                title="サイズを大きくする"
+              >
+                ＋
+              </div>
             </div>
           );
         })}

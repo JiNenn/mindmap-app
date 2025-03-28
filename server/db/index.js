@@ -1,11 +1,11 @@
 // server/db/index.js
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/../../.env' });
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
     await mongoose.connect(
-      process.env.MONGODB_URI,
+      process.env.MONGODB_URI ,
       { useNewUrlParser: true, useUnifiedTopology: true }
     );
     console.log('MongoDB connected');
